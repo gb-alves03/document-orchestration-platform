@@ -1,1 +1,1 @@
-# document-orchestration-platform
+# Document Orchestration Platform
