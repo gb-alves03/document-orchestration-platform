@@ -1,40 +1,53 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "5.99.1"
-    }
-  }
+variable "expire_days" {
+  type    = number
+  default = 365
+}
+variable "raw_prefix" {
+  type    = string
+  default = "raw/"
 }
 variable "bucket_name" {
-  default = ""
+  default = "document-orchestrator-bucket"
 }
 
-resource "aws_s3_bucket" "documents" {
+variable "tags" {
+  type    = map(string)
+  default = {}
+}
+
+resource "aws_s3_bucket" "this" {
   bucket = var.bucket_name
-  acl = "private"
+  acl    = "private"
 
   versioning {
     enabled = true
   }
 
-  lifecycle_rule {
-    id = "expire-unsigned"
-    enabled = true
-    expiration {
-      days = 365
+  server_side_encryption_configuration {
+    rule {
+      apply_server_side_encryption_by_default {
+        sse_algorithm = "AES256"
+      }
     }
   }
+
+  lifecycle_rule {
+    id      = "expire-unsigned"
+    enabled = true
+    expiration {
+      days = var.expire_days
+    }
+    prefix = var.raw_prefix
+  }
+
+  tags = var.tags
 }
 
 resource "aws_s3_bucket_public_access_block" "block" {
-  bucket = "aws_s3_bucket.documents.id"
-  block_public_acls = true
-  block_public_policy = true
-  ignore_public_acls = true
-  restrict_public_buckets = true
-}
+  bucket = aws_s3_bucket.this.id
 
-output "bucket_name" {
-  value = "aws_s3_bucket.documents.bucket"
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
 }
